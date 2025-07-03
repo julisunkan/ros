@@ -64,7 +64,7 @@
                                 {% endif %}
                             </td>
                             <td>{{ product.category.name if product.category else 'No Category' }}</td>
-                            <td>${{ "%.2f"|format(product.price) }}</td>
+                            <td>{{ currency_symbol }}{{ "%.2f"|format(product.price) }}</td>
                             <td>
                                 {{ product.stock_quantity }}
                                 {% if product.is_low_stock %}

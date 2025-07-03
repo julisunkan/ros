@@ -19,7 +19,7 @@
                     <div>
                         <h5 class="card-title">Today's Sales</h5>
                         <h3>{{ today_sales }}</h3>
-                        <small>${{ "%.2f"|format(today_revenue) }}</small>
+                        <small>{{ currency_symbol }}{{ "%.2f"|format(today_revenue) }}</small>
                     </div>
                     <div class="align-self-center">
                         <i class="bi bi-cart-check fs-1"></i>
@@ -28,7 +28,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3">
         <div class="card bg-success text-white">
             <div class="card-body">
@@ -36,7 +36,7 @@
                     <div>
                         <h5 class="card-title">This Week</h5>
                         <h3>{{ week_sales }}</h3>
-                        <small>${{ "%.2f"|format(week_revenue) }}</small>
+                        <small>{{ currency_symbol }}{{ "%.2f"|format(week_revenue) }}</small>
                     </div>
                     <div class="align-self-center">
                         <i class="bi bi-graph-up fs-1"></i>
@@ -45,7 +45,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3">
         <div class="card bg-info text-white">
             <div class="card-body">
@@ -53,7 +53,7 @@
                     <div>
                         <h5 class="card-title">This Month</h5>
                         <h3>{{ month_sales }}</h3>
-                        <small>${{ "%.2f"|format(month_revenue) }}</small>
+                        <small>{{ currency_symbol }}{{ "%.2f"|format(month_revenue) }}</small>
                     </div>
                     <div class="align-self-center">
                         <i class="bi bi-calendar-month fs-1"></i>
@@ -62,7 +62,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3">
         <div class="card bg-warning text-dark">
             <div class="card-body">
@@ -93,7 +93,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Low Stock Alerts -->
     <div class="col-md-4">
         <div class="card">
@@ -154,7 +154,7 @@
                                     <td>{{ sale.sale_number }}</td>
                                     <td>{{ sale.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                                     <td>{{ sale.customer.name if sale.customer else 'Walk-in' }}</td>
-                                    <td>${{ "%.2f"|format(sale.total_amount) }}</td>
+                                    <td>{{ currency_symbol }}{{ "%.2f"|format(sale.total_amount) }}</td>
                                     <td>{{ sale.payment_method.title() }}</td>
                                     <td>
                                         <a href="{{ url_for('sales.receipt', sale_id=sale.id) }}" class="btn btn-sm btn-outline-info">
@@ -210,3 +210,526 @@ new Chart(ctx, {
 });
 </script>
 {% endblock %}
+```
+
+```python
+from flask import Flask, render_template, request, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime, date, timedelta
+import json
+from sqlalchemy import func
+import locale
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pos.db'
+db = SQLAlchemy(app)
+
+# Model definitions
+class Product(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    stock_quantity = db.Column(db.Integer, default=0)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
+    category = db.relationship('Category', backref=db.backref('products', lazy=True))
+    barcode = db.Column(db.String(100), unique=True, nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    image_url = db.Column(db.String(200), nullable=True)  # URL to product image
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Product {self.name}>'
+
+class Category(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Category {self.name}>'
+
+class Customer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=True)
+    phone_number = db.Column(db.String(20), nullable=True)
+    address = db.Column(db.String(200), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Customer {self.name}>'
+
+class Sale(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sale_number = db.Column(db.String(20), unique=True, nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=True)
+    customer = db.relationship('Customer', backref=db.backref('sales', lazy=True))
+    total_amount = db.Column(db.Float, nullable=False)
+    payment_method_id = db.Column(db.Integer, db.ForeignKey('paymentmethod.id'), nullable=False)
+    payment_method = db.relationship('PaymentMethod', backref=db.backref('sales', lazy=True))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    items = db.relationship('SaleItem', backref='sale', lazy=True)
+
+    def __repr__(self):
+        return f'<Sale {self.sale_number}>'
+
+class SaleItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sale_id = db.Column(db.Integer, db.ForeignKey('sale.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    product = db.relationship('Product', lazy=True)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)  # Price at the time of sale
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<SaleItem {self.id}>'
+
+class PaymentMethod(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(50), nullable=False, unique=True)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<PaymentMethod {self.title}>'
+
+class Setting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    value = db.Column(db.String(200), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Setting {self.name}>'
+
+# Utility functions
+def generate_sale_number():
+    now = datetime.now()
+    return now.strftime("SALE-%Y%m%d-%H%M%S")
+
+def get_low_stock_products(limit=5):
+    return Product.query.filter(Product.stock_quantity < 10).limit(limit).all()
+
+def calculate_sales_data(days=7):
+    today = date.today()
+    sales_data = []
+    for i in range(days):
+        current_date = today - timedelta(days=i)
+        start_of_day = datetime.combine(current_date, datetime.min.time())
+        end_of_day = datetime.combine(current_date, datetime.max.time())
+        total_sales = db.session.query(func.sum(Sale.total_amount)).filter(Sale.created_at.between(start_of_day, end_of_day)).scalar() or 0
+        sales_data.append({'date': current_date.strftime('%Y-%m-%d'), 'sales': float(total_sales)})
+    sales_data.reverse()
+    return sales_data
+
+def get_currency_symbol():
+    # Fetch the currency setting from the database
+    currency_setting = Setting.query.filter_by(name='currency').first()
+
+    # If the currency setting exists, return its value; otherwise, default to '$'
+    if currency_setting:
+        return currency_setting.value
+    else:
+        return '$'
+
+# Routes
+@app.route('/')
+def dashboard():
+    current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    today_start = datetime.combine(date.today(), datetime.min.time())
+    today_end = datetime.combine(date.today(), datetime.max.time())
+    today_sales = Sale.query.filter(Sale.created_at.between(today_start, today_end)).count()
+    today_revenue = db.session.query(func.sum(Sale.total_amount)).filter(Sale.created_at.between(today_start, today_end)).scalar() or 0
+
+    week_start = date.today() - timedelta(days=date.today().weekday())
+    week_start_datetime = datetime.combine(week_start, datetime.min.time())
+    week_end_datetime = datetime.combine(date.today(), datetime.max.time())
+    week_sales = Sale.query.filter(Sale.created_at.between(week_start_datetime, week_end_datetime)).count()
+    week_revenue = db.session.query(func.sum(Sale.total_amount)).filter(Sale.created_at.between(week_start_datetime, week_end_datetime)).scalar() or 0
+
+    month_start = date.today().replace(day=1)
+    month_start_datetime = datetime.combine(month_start, datetime.min.time())
+    month_end_datetime = datetime.combine(date.today(), datetime.max.time())
+    month_sales = Sale.query.filter(Sale.created_at.between(month_start_datetime, month_end_datetime)).count()
+    month_revenue = db.session.query(func.sum(Sale.total_amount)).filter(Sale.created_at.between(month_start_datetime, month_end_datetime)).scalar() or 0
+
+    low_stock_products = len(get_low_stock_products())
+    total_products = Product.query.count()
+    low_stock_items = get_low_stock_products()
+    recent_sales = Sale.query.order_by(Sale.created_at.desc()).limit(5).all()
+    sales_data = calculate_sales_data()
+    currency_symbol = get_currency_symbol()
+
+    return render_template('dashboard.html',
+                           current_date=current_date,
+                           today_sales=today_sales,
+                           today_revenue=today_revenue,
+                           week_sales=week_sales,
+                           week_revenue=week_revenue,
+                           month_sales=month_sales,
+                           month_revenue=month_revenue,
+                           low_stock_products=low_stock_products,
+                           total_products=total_products,
+                           low_stock_items=low_stock_items,
+                           recent_sales=recent_sales,
+                           sales_data=json.dumps(sales_data),
+                           currency_symbol=currency_symbol)
+
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    if request.method == 'POST':
+        currency = request.form.get('currency')
+        # Check if the currency setting already exists
+        currency_setting = Setting.query.filter_by(name='currency').first()
+        if currency_setting:
+            # Update the existing currency setting
+            currency_setting.value = currency
+        else:
+            # Create a new currency setting
+            currency_setting = Setting(name='currency', value=currency)
+            db.session.add(currency_setting)
+        db.session.commit()
+        return redirect(url_for('settings'))
+    currency_setting = Setting.query.filter_by(name='currency').first()
+    if currency_setting:
+        currency = currency_setting.value
+    else:
+        currency = '$'  # Default currency
+    return render_template('settings.html', currency=currency)
+
+# Inventory routes
+@app.route('/inventory/products')
+def products():
+    products = Product.query.all()
+    currency_symbol = get_currency_symbol()
+    return render_template('products.html', products=products, currency_symbol=currency_symbol)
+
+# Sales routes
+@app.route('/sales/history')
+def history():
+    sales = Sale.query.all()
+    currency_symbol = get_currency_symbol()
+    return render_template('sales_history.html', sales=sales, currency_symbol=currency_symbol)
+
+@app.route('/sales/receipt/<int:sale_id>')
+def receipt(sale_id):
+    sale = Sale.query.get_or_404(sale_id)
+    currency_symbol = get_currency_symbol()
+    return render_template('receipt.html', sale=sale, currency_symbol=currency_symbol)
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        # Check if default payment methods exist, if not create them
+        if not PaymentMethod.query.filter_by(title='cash').first():
+            cash_payment = PaymentMethod(title='Cash', description='Payment made in cash')
+            db.session.add(cash_payment)
+        if not PaymentMethod.query.filter_by(title='credit').first():
+            credit_payment = PaymentMethod(title='Credit', description='Payment made via credit card')
+            db.session.add(credit_payment)
+        if not Setting.query.filter_by(name='currency').first():
+            currency_setting = Setting(name='currency', value='$')
+            db.session.add(currency_setting)
+        db.session.commit()
+    app.run(debug=True)
+
+```
+
+```html
+{% extends "base.html" %}
+
+{% block title %}Products - POS System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Products</h1>
+    <div>
+        <a href="{{ url_for('add_product') }}" class="btn btn-primary">Add Product</a>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Category</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td>{{ product.id }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ currency_symbol }}{{ "%.2f"|format(product.price) }}</td>
+                <td>{{ product.stock_quantity }}</td>
+                <td>{{ product.category.name }}</td>
+                <td>
+                    <a href="{{ url_for('edit_product', product_id=product.id) }}" class="btn btn-sm btn-outline-info">Edit</a>
+                    <a href="{{ url_for('delete_product', product_id=product.id) }}" class="btn btn-sm btn-outline-danger">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+```
+
+```html
+{% extends "base.html" %}
+
+{% block title %}Sales History - POS System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Sales History</h1>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Sale #</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Total Amount</th>
+                <th>Payment Method</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in sales %}
+            <tr>
+                <td>{{ sale.sale_number }}</td>
+                <td>{{ sale.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>{{ sale.customer.name if sale.customer else 'Walk-in' }}</td>
+                <td>{{ currency_symbol }}{{ "%.2f"|format(sale.total_amount) }}</td>
+                <td>{{ sale.payment_method.title() }}</td>
+                <td>
+                    <a href="{{ url_for('receipt', sale_id=sale.id) }}" class="btn btn-sm btn-outline-info">View Receipt</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+```
+
+```html
+{% extends "base.html" %}
+
+{% block title %}Receipt - POS System{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    Receipt #{{ sale.sale_number }}
+                </div>
+                <div class="card-body">
+                    <p><strong>Date:</strong> {{ sale.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    {% if sale.customer %}
+                        <p><strong>Customer:</strong> {{ sale.customer.name }}</p>
+                    {% else %}
+                        <p><strong>Customer:</strong> Walk-in</p>
+                    {% endif %}
+                    <hr>
+                    <h5>Items:</h5>
+                    <ul class="list-group">
+                        {% for item in sale.items %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    {{ item.product.name }}
+                                    <small class="text-muted">x {{ item.quantity }}</small>
+                                </div>
+                                <span>{{ currency_symbol }}{{ "%.2f"|format(item.price * item.quantity) }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <hr>
+                    <p class="text-right"><strong>Total:</strong> {{ currency_symbol }}{{ "%.2f"|format(sale.total_amount) }}</p>
+                    <p><strong>Payment Method:</strong> {{ sale.payment_method.title() }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+```
+
+```html
+{% extends "base.html" %}
+
+{% block title %}Settings - POS System{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Settings</h1>
+    <form method="post">
+        <div class="mb-3">
+            <label for="currency" class="form-label">Currency</label>
+            <select class="form-select" id="currency" name="currency">
+                <option value="$" {% if currency == '$' %}selected{% endif %}>US Dollar ($)</option>
+                <option value="€" {% if currency == '€' %}selected{% endif %}>Euro (€)</option>
+                <option value="£" {% if currency == '£' %}selected{% endif %}>British Pound (£)</option>
+                <!-- Add more currencies as needed -->
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+</div>
+{% endblock %}
+```
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}POS System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/">POS System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('products') }}">Inventory</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('history') }}">Sales History</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('settings') }}">Settings</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+```
+
+```css
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f8f9fa;
+}
+
+.navbar {
+    background-color: #ffffff !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.nav-link {
+    color: #495057 !important;
+}
+
+.nav-link:hover {
+    color: #007bff !important;
+}
+
+.container {
+    margin-top: 20px;
+}
+
+.card {
+    margin-bottom: 20px;
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    font-weight: bold;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0069d9;
+    border-color: #0062cc;
+}
+
+.btn-outline-primary {
+    color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-outline-primary:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.table {
+    background-color: #ffffff;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Additional styles for better appearance */
+.list-group-item {
+    border: none;
+    padding: 0.75rem 1rem;
+}
+
+.list-group-item:first-child {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.list-group-item:last-child {
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+}
+```

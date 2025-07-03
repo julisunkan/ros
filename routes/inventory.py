@@ -4,7 +4,7 @@ from models import Product, Category, SaleItem
 from forms import ProductForm, CategoryForm
 from app import db
 from sqlalchemy import func, desc
-from utils import generate_barcode
+from utils import generate_barcode, get_currency_symbol
 
 bp = Blueprint('inventory', __name__, url_prefix='/inventory')
 
@@ -31,11 +31,17 @@ def products():
     products = query.order_by(Product.name).all()
     categories = Category.query.order_by(Category.name).all()
     
+    # Get currency settings
+    from models import Settings
+    settings = Settings.query.first()
+    currency_symbol = get_currency_symbol(settings.currency if settings else 'USD')
+    
     return render_template('inventory/products.html', 
                          products=products, 
                          categories=categories,
                          search=search,
-                         category_id=category_id)
+                         category_id=category_id,
+                         currency_symbol=currency_symbol)
 
 @bp.route('/products/add', methods=['GET', 'POST'])
 @login_required

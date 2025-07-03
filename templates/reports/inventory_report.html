@@ -26,7 +26,7 @@
         <div class="card bg-success text-white">
             <div class="card-body">
                 <h5 class="card-title">Total Value</h5>
-                <h3>${{ "%.2f"|format(total_value) }}</h3>
+                <h3>{{ currency_symbol }}{{ "%.2f"|format(total_value) }}</h3>
             </div>
         </div>
     </div>
@@ -110,8 +110,8 @@
                                 {% endif %}
                             </td>
                             <td>{{ product.category.name if product.category else 'No Category' }}</td>
-                            <td>${{ "%.2f"|format(product.price) }}</td>
-                            <td>${{ "%.2f"|format(product.cost) }}</td>
+                            <td>{{ currency_symbol }}{{ "%.2f"|format(product.price) }}</td>
+                            <td>{{ currency_symbol }}{{ "%.2f"|format(product.cost) }}</td>
                             <td>{{ product.stock_quantity }}</td>
                             <td>${{ "%.2f"|format(product.price * product.stock_quantity) }}</td>
                             <td>

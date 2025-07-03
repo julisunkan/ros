@@ -185,8 +185,10 @@ function updateQuantity(productId, newQuantity) {
 
 // Format currency
 function formatCurrency(amount) {
+    // Get currency from global variable set in template
+    const currency = window.currentCurrency || 'USD';
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: 'USD'
+        currency: currency
     }).format(amount);
 }

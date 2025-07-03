@@ -4,7 +4,7 @@ from models import Sale, Product, Customer, SaleItem
 from app import db
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
-from utils import export_to_csv
+from utils import export_to_csv, get_currency_symbol
 import json
 
 bp = Blueprint('reports', __name__, url_prefix='/reports')
@@ -81,6 +81,11 @@ def sales_report():
         'top_products': [{'name': p.name, 'quantity': p.quantity_sold, 'revenue': float(p.revenue)} for p in top_products]
     }
     
+    # Get currency settings
+    from models import Settings
+    settings = Settings.query.first()
+    currency_symbol = get_currency_symbol(settings.currency if settings else 'USD')
+    
     return render_template('reports/sales_report.html',
                          sales=sales,
                          total_sales=total_sales,
@@ -91,7 +96,8 @@ def sales_report():
                          top_products=top_products,
                          chart_data=json.dumps(chart_data),
                          start_date=start_date,
-                         end_date=end_date)
+                         end_date=end_date,
+                         currency_symbol=currency_symbol)
 
 @bp.route('/inventory')
 @login_required
@@ -112,12 +118,18 @@ def inventory_report():
     # Out of stock items
     out_of_stock_items = [p for p in products if p.stock_quantity == 0]
     
+    # Get currency settings
+    from models import Settings
+    settings = Settings.query.first()
+    currency_symbol = get_currency_symbol(settings.currency if settings else 'USD')
+    
     return render_template('reports/inventory_report.html',
                          products=products,
                          total_value=total_value,
                          total_cost=total_cost,
                          low_stock_items=low_stock_items,
-                         out_of_stock_items=out_of_stock_items)
+                         out_of_stock_items=out_of_stock_items,
+                         currency_symbol=currency_symbol)
 
 @bp.route('/export/sales')
 @login_required
