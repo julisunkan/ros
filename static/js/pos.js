@@ -92,31 +92,41 @@ function updateCartTotals() {
     // Get currency symbol from global variable set in template
     const currencySymbol = window.currencySymbol || '$';
     
-    // Get subtotal from cart
+    // Get subtotal from cart items in the table
     let subtotal = 0;
-    const cartItems = document.querySelectorAll('.cart-item');
-    cartItems.forEach(item => {
-        const price = parseFloat(item.dataset.price);
-        const quantity = parseInt(item.dataset.quantity);
-        subtotal += price * quantity;
-    });
+    const cartTable = document.querySelector('.table tbody');
+    if (cartTable) {
+        const rows = cartTable.querySelectorAll('tr');
+        rows.forEach(row => {
+            const totalCell = row.querySelector('td:nth-child(4)');
+            if (totalCell) {
+                const totalText = totalCell.textContent.replace(/[^\d.]/g, '');
+                subtotal += parseFloat(totalText) || 0;
+            }
+        });
+    }
     
-    // Get tax rate from the page or use default
+    // Get tax rate from the page
     const taxRateText = document.querySelector('[id*="tax"]')?.textContent || '0%';
     const taxRate = parseFloat(taxRateText.match(/[\d.]+/)?.[0] || '0') / 100;
     
-    const taxAmount = (subtotal - discountAmount) * taxRate;
-    const total = subtotal - discountAmount + taxAmount;
+    const afterDiscount = subtotal - discountAmount;
+    const taxAmount = Math.max(0, afterDiscount * taxRate);
+    const total = afterDiscount + taxAmount;
     
     // Update display
     if (document.getElementById('subtotalAmount')) {
-        document.getElementById('subtotalAmount').textContent = `${currencySymbol}${(subtotal - discountAmount).toFixed(2)}`;
+        document.getElementById('subtotalAmount').textContent = `${currencySymbol}${afterDiscount.toFixed(2)}`;
     }
     if (document.getElementById('discountAmount')) {
         document.getElementById('discountAmount').textContent = `${currencySymbol}${discountAmount.toFixed(2)}`;
     }
-    document.getElementById('taxAmount').textContent = `${currencySymbol}${taxAmount.toFixed(2)}`;
-    document.getElementById('totalAmount').textContent = `${currencySymbol}${total.toFixed(2)}`;
+    if (document.getElementById('taxAmount')) {
+        document.getElementById('taxAmount').textContent = `${currencySymbol}${taxAmount.toFixed(2)}`;
+    }
+    if (document.getElementById('totalAmount')) {
+        document.getElementById('totalAmount').textContent = `${currencySymbol}${total.toFixed(2)}`;
+    }
 }
 
 // Initialize POS functionality
