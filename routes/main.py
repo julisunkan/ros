@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from models import Product, Sale, Customer, SaleItem, Settings
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
+from utils import get_currency_symbol, format_currency
 import json
 
 bp = Blueprint('main', __name__)
@@ -53,6 +54,10 @@ def dashboard():
     
     sales_data.reverse()  # Show chronological order
     
+    # Get currency settings
+    settings = Settings.query.first()
+    currency_symbol = get_currency_symbol(settings.currency if settings else 'USD')
+    
     return render_template('dashboard.html',
                          current_date=today.strftime('%B %d, %Y'),
                          today_sales=today_sales,
@@ -66,4 +71,5 @@ def dashboard():
                          total_customers=total_customers,
                          recent_sales=recent_sales,
                          low_stock_items=low_stock_items,
-                         sales_data=json.dumps(sales_data))
+                         sales_data=json.dumps(sales_data),
+                         currency_symbol=currency_symbol)

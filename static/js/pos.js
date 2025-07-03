@@ -89,6 +89,9 @@ function updateCartTotals() {
     const discountInput = document.querySelector('input[name="discount_amount"]');
     const discountAmount = parseFloat(discountInput.value) || 0;
     
+    // Get currency symbol from the page
+    const currencySymbol = document.getElementById('totalAmount').textContent.replace(/[\d.,\s]/g, '').trim() || '$';
+    
     // Get subtotal from cart
     let subtotal = 0;
     const cartItems = document.querySelectorAll('.cart-item');
@@ -98,15 +101,22 @@ function updateCartTotals() {
         subtotal += price * quantity;
     });
     
-    // Calculate tax (you might want to get tax rate from settings)
-    const taxRate = 0.08; // 8% tax rate - should be dynamic
+    // Get tax rate from the page or use default
+    const taxRateText = document.querySelector('[id*="tax"]')?.textContent || '0%';
+    const taxRate = parseFloat(taxRateText.match(/[\d.]+/)?.[0] || '0') / 100;
+    
     const taxAmount = (subtotal - discountAmount) * taxRate;
     const total = subtotal - discountAmount + taxAmount;
     
     // Update display
-    document.getElementById('discountAmount').textContent = `$${discountAmount.toFixed(2)}`;
-    document.getElementById('taxAmount').textContent = `$${taxAmount.toFixed(2)}`;
-    document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
+    if (document.getElementById('subtotalAmount')) {
+        document.getElementById('subtotalAmount').textContent = `${currencySymbol}${(subtotal - discountAmount).toFixed(2)}`;
+    }
+    if (document.getElementById('discountAmount')) {
+        document.getElementById('discountAmount').textContent = `${currencySymbol}${discountAmount.toFixed(2)}`;
+    }
+    document.getElementById('taxAmount').textContent = `${currencySymbol}${taxAmount.toFixed(2)}`;
+    document.getElementById('totalAmount').textContent = `${currencySymbol}${total.toFixed(2)}`;
 }
 
 // Initialize POS functionality

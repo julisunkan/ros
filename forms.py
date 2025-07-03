@@ -65,6 +65,24 @@ class SettingsForm(FlaskForm):
     store_phone = StringField('Store Phone', validators=[Optional(), Length(max=20)])
     store_email = StringField('Store Email', validators=[Optional(), Email()])
     tax_rate = DecimalField('Tax Rate (%)', validators=[Optional(), NumberRange(min=0, max=100)], default=0.0)
-    currency = StringField('Currency', validators=[Optional(), Length(max=10)], default='USD')
+    currency = SelectField('Currency', choices=[
+        ('USD', 'US Dollar ($)'),
+        ('EUR', 'Euro (€)'),
+        ('GBP', 'British Pound (£)'),
+        ('NGN', 'Nigerian Naira (₦)'),
+        ('JPY', 'Japanese Yen (¥)'),
+        ('CAD', 'Canadian Dollar (C$)'),
+        ('AUD', 'Australian Dollar (A$)'),
+        ('INR', 'Indian Rupee (₹)'),
+        ('CNY', 'Chinese Yuan (¥)'),
+        ('KRW', 'South Korean Won (₩)'),
+        ('BRL', 'Brazilian Real (R$)'),
+        ('MXN', 'Mexican Peso ($)'),
+        ('ZAR', 'South African Rand (R)'),
+        ('GHS', 'Ghana Cedi (₵)'),
+        ('KES', 'Kenyan Shilling (KSh)'),
+        ('UGX', 'Ugandan Shilling (USh)'),
+        ('TZS', 'Tanzanian Shilling (TSh)')
+    ], default='USD')
     receipt_footer = TextAreaField('Receipt Footer')
     low_stock_alerts = BooleanField('Enable Low Stock Alerts', default=True)

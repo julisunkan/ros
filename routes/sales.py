@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from models import Sale, SaleItem, Product, Customer, Settings
 from forms import SaleForm
 from app import db
-from utils import generate_sale_number, calculate_tax, generate_receipt_pdf
+from utils import generate_sale_number, calculate_tax, generate_receipt_pdf, get_currency_symbol
 from datetime import datetime, timezone
 from sqlalchemy import desc
 
@@ -19,7 +19,26 @@ def sales():
     # Get cart from session
     cart = session.get('cart', {})
     
-    return render_template('pos/sales.html', form=form, products=products, cart=cart)
+    # Calculate cart totals
+    cart_subtotal = sum(float(item['price']) * item['quantity'] for item in cart.values())
+    
+    # Get settings for tax calculation
+    settings = Settings.query.first()
+    tax_rate = float(settings.tax_rate) if settings and settings.tax_rate else 0
+    currency_symbol = get_currency_symbol(settings.currency if settings else 'USD')
+    
+    cart_tax = calculate_tax(cart_subtotal, tax_rate)
+    cart_total = cart_subtotal + cart_tax
+    
+    return render_template('pos/sales.html', 
+                         form=form, 
+                         products=products, 
+                         cart=cart,
+                         cart_subtotal=cart_subtotal,
+                         cart_tax=cart_tax,
+                         cart_total=cart_total,
+                         tax_rate=tax_rate,
+                         currency_symbol=currency_symbol)
 
 @bp.route('/add-to-cart', methods=['POST'])
 @login_required

@@ -129,6 +129,30 @@ def calculate_tax(amount, tax_rate):
     tax_rate_decimal = Decimal(str(tax_rate))
     return float(amount_decimal * (tax_rate_decimal / 100))
 
-def format_currency(amount):
+def get_currency_symbol(currency_code):
+    """Get currency symbol from currency code"""
+    currency_symbols = {
+        'USD': '$',
+        'EUR': '€',
+        'GBP': '£',
+        'NGN': '₦',  # Nigerian Naira
+        'JPY': '¥',
+        'CAD': 'C$',
+        'AUD': 'A$',
+        'INR': '₹',
+        'CNY': '¥',
+        'KRW': '₩',
+        'BRL': 'R$',
+        'MXN': '$',
+        'ZAR': 'R',
+        'GHS': '₵',  # Ghana Cedi
+        'KES': 'KSh', # Kenyan Shilling
+        'UGX': 'USh', # Ugandan Shilling
+        'TZS': 'TSh', # Tanzanian Shilling
+    }
+    return currency_symbols.get(currency_code, currency_code)
+
+def format_currency(amount, currency_code='USD'):
     """Format amount as currency"""
-    return f"${amount:.2f}"
+    symbol = get_currency_symbol(currency_code)
+    return f"{symbol}{amount:.2f}"
