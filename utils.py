@@ -37,6 +37,9 @@ def generate_receipt_pdf(sale):
     if not settings:
         settings = Settings()
     
+    # Get currency symbol
+    currency_symbol = get_currency_symbol(settings.currency if settings else 'USD')
+    
     # Header
     title_style = ParagraphStyle(
         'CustomTitle',
@@ -72,8 +75,8 @@ def generate_receipt_pdf(sale):
         table_data.append([
             item.product.name,
             str(item.quantity),
-            f"${item.unit_price:.2f}",
-            f"${item.total_price:.2f}"
+            f"{currency_symbol}{item.unit_price:.2f}",
+            f"{currency_symbol}{item.total_price:.2f}"
         ])
     
     table = Table(table_data, colWidths=[3*inch, 0.5*inch, 1*inch, 1*inch])
@@ -92,12 +95,12 @@ def generate_receipt_pdf(sale):
     story.append(Spacer(1, 20))
     
     # Totals
-    story.append(Paragraph(f"<b>Subtotal: ${sale.subtotal:.2f}</b>", styles['Normal']))
+    story.append(Paragraph(f"<b>Subtotal: {currency_symbol}{sale.subtotal:.2f}</b>", styles['Normal']))
     if sale.discount_amount > 0:
-        story.append(Paragraph(f"<b>Discount: -${sale.discount_amount:.2f}</b>", styles['Normal']))
+        story.append(Paragraph(f"<b>Discount: -{currency_symbol}{sale.discount_amount:.2f}</b>", styles['Normal']))
     if sale.tax_amount > 0:
-        story.append(Paragraph(f"<b>Tax: ${sale.tax_amount:.2f}</b>", styles['Normal']))
-    story.append(Paragraph(f"<b>Total: ${sale.total_amount:.2f}</b>", styles['Heading2']))
+        story.append(Paragraph(f"<b>Tax: {currency_symbol}{sale.tax_amount:.2f}</b>", styles['Normal']))
+    story.append(Paragraph(f"<b>Total: {currency_symbol}{sale.total_amount:.2f}</b>", styles['Heading2']))
     story.append(Paragraph(f"<b>Payment Method: {sale.payment_method.title()}</b>", styles['Normal']))
     
     if settings.receipt_footer:
