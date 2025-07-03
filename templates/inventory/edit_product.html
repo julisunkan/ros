@@ -16,7 +16,7 @@
             <div class="card-body">
                 <form method="POST">
                     {{ form.hidden_tag() }}
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -31,7 +31,7 @@
                                 {% endif %}
                             </div>
                         </div>
-                        
+
                         <div class="col-md-6">
                             <div class="mb-3">
                                 {{ form.category_id.label(class="form-label") }}
@@ -46,7 +46,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         {{ form.description.label(class="form-label") }}
                         {{ form.description(class="form-control", rows="3") }}
@@ -58,7 +58,7 @@
                             </div>
                         {% endif %}
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
@@ -73,7 +73,7 @@
                                 {% endif %}
                             </div>
                         </div>
-                        
+
                         <div class="col-md-4">
                             <div class="mb-3">
                                 {{ form.price.label(class="form-label") }}
@@ -87,7 +87,7 @@
                                 {% endif %}
                             </div>
                         </div>
-                        
+
                         <div class="col-md-4">
                             <div class="mb-3">
                                 {{ form.cost.label(class="form-label") }}
@@ -102,7 +102,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -117,7 +117,7 @@
                                 {% endif %}
                             </div>
                         </div>
-                        
+
                         <div class="col-md-6">
                             <div class="mb-3">
                                 {{ form.low_stock_threshold.label(class="form-label") }}
@@ -132,14 +132,14 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <div class="form-check">
                             {{ form.is_active(class="form-check-input") }}
                             {{ form.is_active.label(class="form-check-label") }}
                         </div>
                     </div>
-                    
+
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for('inventory.products') }}" class="btn btn-secondary">Cancel</a>
                         <button type="submit" class="btn btn-primary">
@@ -151,4 +151,27 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const priceField = document.getElementById('price');
+    const costField = document.getElementById('cost');
+
+    function validateCostPrice() {
+        const price = parseFloat(priceField.value) || 0;
+        const cost = parseFloat(costField.value) || 0;
+
+        if (cost > price && price > 0) {
+            costField.setCustomValidity('Cost price cannot be higher than selling price.');
+            costField.classList.add('is-invalid');
+        } else {
+            costField.setCustomValidity('');
+            costField.classList.remove('is-invalid');
+        }
+    }
+
+    priceField.addEventListener('input', validateCostPrice);
+    costField.addEventListener('input', validateCostPrice);
+});
+</script>
 {% endblock %}

@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField, TextAreaField, DecimalField, IntegerField, BooleanField, HiddenField
-from wtforms.validators import DataRequired, Email, Length, NumberRange, Optional
+from wtforms.validators import DataRequired, Email, Length, NumberRange, Optional, ValidationError
 from models import Role, Category, Product, Customer
 
 class LoginForm(FlaskForm):
@@ -32,6 +32,10 @@ class ProductForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super(ProductForm, self).__init__(*args, **kwargs)
         self.category_id.choices = [(c.id, c.name) for c in Category.query.all()]
+    
+    def validate_cost(self, field):
+        if field.data and self.price.data and field.data > self.price.data:
+            raise ValidationError('Cost price cannot be higher than selling price.')
 
 class CategoryForm(FlaskForm):
     name = StringField('Category Name', validators=[DataRequired(), Length(max=100)])
