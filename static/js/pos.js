@@ -89,8 +89,8 @@ function updateCartTotals() {
     const discountInput = document.querySelector('input[name="discount_amount"]');
     const discountAmount = parseFloat(discountInput.value) || 0;
     
-    // Get currency symbol from the page
-    const currencySymbol = document.getElementById('totalAmount').textContent.replace(/[\d.,\s]/g, '').trim() || '$';
+    // Get currency symbol from global variable set in template
+    const currencySymbol = window.currencySymbol || '$';
     
     // Get subtotal from cart
     let subtotal = 0;
