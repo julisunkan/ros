@@ -113,7 +113,7 @@
                             <td>{{ currency_symbol }}{{ "%.2f"|format(product.price) }}</td>
                             <td>{{ currency_symbol }}{{ "%.2f"|format(product.cost) }}</td>
                             <td>{{ product.stock_quantity }}</td>
-                            <td>${{ "%.2f"|format(product.price * product.stock_quantity) }}</td>
+                            <td>{{ currency_symbol }}{{ "%.2f"|format(product.price * product.stock_quantity) }}</td>
                             <td>
                                 {% if product.stock_quantity == 0 %}
                                     <span class="badge bg-danger">Out of Stock</span>

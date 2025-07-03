@@ -52,10 +52,15 @@ def add_product():
     form = ProductForm()
     
     if form.validate_on_submit():
+        # Handle empty barcode - set to None to avoid unique constraint issues
+        barcode = form.barcode.data.strip() if form.barcode.data else None
+        if barcode == '':
+            barcode = None
+            
         product = Product(
             name=form.name.data,
             description=form.description.data,
-            barcode=form.barcode.data,
+            barcode=barcode,
             price=form.price.data,
             cost=form.cost.data,
             stock_quantity=form.stock_quantity.data,
@@ -81,9 +86,14 @@ def edit_product(product_id):
     form = ProductForm(obj=product)
     
     if form.validate_on_submit():
+        # Handle empty barcode - set to None to avoid unique constraint issues
+        barcode = form.barcode.data.strip() if form.barcode.data else None
+        if barcode == '':
+            barcode = None
+            
         product.name = form.name.data
         product.description = form.description.data
-        product.barcode = form.barcode.data
+        product.barcode = barcode
         product.price = form.price.data
         product.cost = form.cost.data
         product.stock_quantity = form.stock_quantity.data
