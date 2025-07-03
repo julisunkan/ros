@@ -13,11 +13,16 @@
                 <div class="card-body" id="receipt-content">
                     <!-- Store Information -->
                     <div class="text-center mb-4">
-                        <h3>{{ sale.cashier.role.name.title() if sale.cashier else 'POS Store' }}</h3>
-                        <p class="mb-1">123 Main Street</p>
-                        <p class="mb-1">City, State 12345</p>
-                        <p class="mb-1">Phone: (555) 123-4567</p>
-                        <p>Email: store@pos.com</p>
+                        <h3>{{ store_settings.store_name if store_settings else 'POS Store' }}</h3>
+                        {% if store_settings and store_settings.store_address %}
+                        <p class="mb-1">{{ store_settings.store_address }}</p>
+                        {% endif %}
+                        {% if store_settings and store_settings.store_phone %}
+                        <p class="mb-1">Phone: {{ store_settings.store_phone }}</p>
+                        {% endif %}
+                        {% if store_settings and store_settings.store_email %}
+                        <p>Email: {{ store_settings.store_email }}</p>
+                        {% endif %}
                     </div>
                     
                     <hr>
@@ -109,8 +114,12 @@
                     
                     <!-- Footer -->
                     <div class="text-center mt-4">
+                        {% if store_settings and store_settings.receipt_footer %}
+                        <p class="text-muted">{{ store_settings.receipt_footer }}</p>
+                        {% else %}
                         <p class="text-muted">Thank you for your business!</p>
                         <p class="text-muted">Visit us again soon.</p>
+                        {% endif %}
                     </div>
                 </div>
                 

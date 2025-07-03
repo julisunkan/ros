@@ -186,10 +186,10 @@ def checkout():
 def receipt(sale_id):
     """Display receipt"""
     sale = Sale.query.get_or_404(sale_id)
-    # Get currency symbol
+    # Get store settings and currency symbol
     settings = Settings.query.first()
     currency_symbol = get_currency_symbol(settings.currency if settings else 'USD')
-    return render_template('receipts/receipt.html', sale=sale, currency_symbol=currency_symbol)
+    return render_template('receipts/receipt.html', sale=sale, currency_symbol=currency_symbol, store_settings=settings)
 
 @bp.route('/receipt/<int:sale_id>/pdf')
 @login_required
