@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Sales History{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Sales History</h1>
+    <a href="{{ url_for('sales.sales') }}" class="btn btn-primary">
+        <i class="bi bi-plus"></i> New Sale
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if sales.items %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Sale #</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Cashier</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Payment</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in sales.items %}
+                        <tr>
+                            <td>{{ sale.sale_number }}</td>
+                            <td>{{ sale.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ sale.customer.name if sale.customer else 'Walk-in' }}</td>
+                            <td>{{ sale.cashier.username }}</td>
+                            <td>{{ sale.items|length }}</td>
+                            <td>${{ "%.2f"|format(sale.total_amount) }}</td>
+                            <td>{{ sale.payment_method.title() }}</td>
+                            <td>
+                                <a href="{{ url_for('sales.receipt', sale_id=sale.id) }}" class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-receipt"></i>
+                                </a>
+                                <a href="{{ url_for('sales.receipt_pdf', sale_id=sale.id) }}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if sales.pages > 1 %}
+            <nav aria-label="Sales pagination">
+                <ul class="pagination justify-content-center">
+                    {% if sales.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('sales.history', page=sales.prev_num) }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in sales.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num != sales.page %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('sales.history', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if sales.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('sales.history', page=sales.next_num) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-receipt display-1 text-muted"></i>
+                <h3 class="text-muted">No sales history</h3>
+                <p class="text-muted">Sales will appear here once you start making transactions.</p>
+                <a href="{{ url_for('sales.sales') }}" class="btn btn-primary">
+                    <i class="bi bi-plus"></i> Make First Sale
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

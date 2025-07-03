@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Customers{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Customers</h1>
+    <a href="{{ url_for('customers.add_customer') }}" class="btn btn-primary">
+        <i class="bi bi-plus"></i> Add Customer
+    </a>
+</div>
+
+<!-- Search -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-10">
+                <input type="text" name="search" value="{{ search }}" class="form-control" placeholder="Search customers by name...">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Customers Table -->
+<div class="card">
+    <div class="card-body">
+        {% if customers %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Loyalty Points</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in customers %}
+                        <tr>
+                            <td>{{ customer.name }}</td>
+                            <td>{{ customer.email or 'N/A' }}</td>
+                            <td>{{ customer.phone or 'N/A' }}</td>
+                            <td>{{ customer.loyalty_points }}</td>
+                            <td>
+                                <a href="{{ url_for('customers.view_customer', customer_id=customer.id) }}" class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('customers.edit_customer', customer_id=customer.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% if current_user.can_access(['admin', 'manager']) %}
+                                <form method="POST" action="{{ url_for('customers.delete_customer', customer_id=customer.id) }}" class="d-inline" onsubmit="return confirm('Are you sure?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-people display-1 text-muted"></i>
+                <h3 class="text-muted">No customers found</h3>
+                <p class="text-muted">Try adjusting your search criteria or add some customers.</p>
+                <a href="{{ url_for('customers.add_customer') }}" class="btn btn-primary">
+                    <i class="bi bi-plus"></i> Add First Customer
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
